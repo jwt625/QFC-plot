@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Interactive Plot</title>
+  <!-- Include Plotly -->
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      display: flex;
+      flex-direction: row;
+      height: 100vh;
+    }
+    #plot-container {
+      flex: 2;
+      padding: 10px;
+    }
+    #controls-container {
+      flex: 1;
+      padding: 10px;
+      border-left: 1px solid #ccc;
+      overflow-y: auto;
+    }
+    .control-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Left side: Plot -->
+    <div id="plot-container"></div>
+    <!-- Right side: Controls -->
+    <div id="controls-container">
+      <div class="control-group">
+        <label for="x-axis-select">Select X-axis (numerical):</label>
+        <select id="x-axis-select"></select>
+      </div>
+      <div class="control-group">
+        <label for="y-axis-select">Select Y-axis (numerical):</label>
+        <select id="y-axis-select"></select>
+      </div>
+      <div class="control-group">
+        <label>Hover Info (non-numerical):</label>
+        <div id="hover-checkboxes"></div>
+      </div>
+      <div class="control-group">
+        <button id="toggle-x-scale">Toggle X Scale (linear)</button>
+        <button id="toggle-y-scale">Toggle Y Scale (linear)</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    let rawData = [];
+    let numericalKeys = [];
+    let nonNumericalKeys = [];
+    let xScale = 'linear';
+    let yScale = 'linear';
+
+    function isNumeric(value) {
+      return typeof value === 'number' && !isNaN(value);
+    }
+
+    // Identify keys from the JSON data and separate numerical and non-numerical keys.
+    function identifyKeys(data) {
+      let keysSet = new Set();
+      data.forEach(item => {
+        Object.keys(item).forEach(key => keysSet.add(key));
+      });
+      let allKeys = Array.from(keysSet);
+      numericalKeys = [];
+      nonNumericalKeys = [];
+      allKeys.forEach(key => {
+        // Check if at least one non-null value is numeric.
+        let foundNumeric = false;
+        for (let item of data) {
+          if (item[key] !== null && item[key] !== undefined) {
+            if (isNumeric(item[key])) {
+              foundNumeric = true;
+              break;
+            }
+          }
+        }
+        if (foundNumeric) {
+          numericalKeys.push(key);
+        } else {
+          nonNumericalKeys.push(key);
+        }
+      });
+    }
+
+    // Populate the dropdowns and checkboxes based on identified keys.
+    function populateControls() {
+      const xSelect = document.getElementById('x-axis-select');
+      const ySelect = document.getElementById('y-axis-select');
+      xSelect.innerHTML = '';
+      ySelect.innerHTML = '';
+      numericalKeys.forEach(key => {
+        let optionX = document.createElement('option');
+        optionX.value = key;
+        optionX.text = key;
+        xSelect.appendChild(optionX);
+
+        let optionY = document.createElement('option');
+        optionY.value = key;
+        optionY.text = key;
+        ySelect.appendChild(optionY);
+      });
+      // Set default selections.
+      if (numericalKeys.length >= 2) {
+        xSelect.value = numericalKeys[0];
+        ySelect.value = numericalKeys[1];
+      }
+
+      // Populate checkboxes for non-numerical keys.
+      const hoverContainer = document.getElementById('hover-checkboxes');
+      hoverContainer.innerHTML = '';
+      nonNumericalKeys.forEach(key => {
+        let checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = 'chk-' + key;
+        checkbox.value = key;
+        checkbox.checked = true; // default: include in hover info
+        checkbox.addEventListener('change', updatePlot);
+        
+        let label = document.createElement('label');
+        label.htmlFor = 'chk-' + key;
+        label.textContent = key;
+        
+        let div = document.createElement('div');
+        div.appendChild(checkbox);
+        div.appendChild(label);
+        hoverContainer.appendChild(div);
+      });
+    }
+
+    // Update the plot based on current control selections.
+    function updatePlot() {
+      const xSelect = document.getElementById('x-axis-select');
+      const ySelect = document.getElementById('y-axis-select');
+      const xKey = xSelect.value;
+      const yKey = ySelect.value;
+
+      // Get selected non-numerical keys for hover info.
+      const hoverContainer = document.getElementById('hover-checkboxes');
+      const selectedHoverKeys = [];
+      hoverContainer.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+        if (chk.checked) {
+          selectedHoverKeys.push(chk.value);
+        }
+      });
+
+      // Filter out data points with missing x or y values.
+      const filteredData = rawData.filter(item => item[xKey] !== null && item[yKey] !== null);
+      const xData = filteredData.map(item => item[xKey]);
+      const yData = filteredData.map(item => item[yKey]);
+
+      // Build hover text for each data point.
+      const hoverTexts = filteredData.map(item => {
+        let textLines = [];
+        selectedHoverKeys.forEach(key => {
+          let val = item[key] !== null ? item[key] : '';
+          textLines.push(`${key}: ${val}`);
+        });
+        return textLines.join('<br>');
+      });
+
+      const trace = {
+        x: xData,
+        y: yData,
+        mode: 'markers',
+        type: 'scatter',
+        text: hoverTexts,
+        hoverinfo: 'text'
+      };
+
+      const layout = {
+        xaxis: {
+          title: xKey,
+          type: xScale
+        },
+        yaxis: {
+          title: yKey,
+          type: yScale
+        },
+        margin: { t: 20 }
+      };
+
+      Plotly.newPlot('plot-container', [trace], layout);
+    }
+
+    // Attach event listeners for the dropdowns.
+    document.getElementById('x-axis-select').addEventListener('change', updatePlot);
+    document.getElementById('y-axis-select').addEventListener('change', updatePlot);
+
+    // Toggle buttons for axis scales.
+    document.getElementById('toggle-x-scale').addEventListener('click', function() {
+      xScale = (xScale === 'linear') ? 'log' : 'linear';
+      this.textContent = `Toggle X Scale (${xScale})`;
+      updatePlot();
+    });
+    document.getElementById('toggle-y-scale').addEventListener('click', function() {
+      yScale = (yScale === 'linear') ? 'log' : 'linear';
+      this.textContent = `Toggle Y Scale (${yScale})`;
+      updatePlot();
+    });
+
+    // Load JSON data from output.json.
+    fetch('output.json')
+      .then(response => response.json())
+      .then(data => {
+        rawData = data;
+        identifyKeys(rawData);
+        populateControls();
+        updatePlot();
+      })
+      .catch(error => {
+        console.error('Error loading JSON:', error);
+      });
+  </script>
+</body>
+</html>
