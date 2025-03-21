@@ -5,10 +5,10 @@
 # References
 
 ## Review
-Lambert2019: Coherent Conversion Between Microwave and Optical Photons—An Overview of Physical Implementations
-- https://doi.org/10.1002/qute.201900077
-Han2021: Microwave-optical quantum frequency conversion
-- https://doi.org/10.1364/OPTICA.425414
+- Lambert2019: Coherent Conversion Between Microwave and Optical Photons—An Overview of Physical Implementations
+  - https://doi.org/10.1002/qute.201900077
+- Han2021: Microwave-optical quantum frequency conversion
+  - https://doi.org/10.1364/OPTICA.425414
 
 
 ## Piezo-optomechanics
