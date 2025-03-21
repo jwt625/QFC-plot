@@ -10,6 +10,7 @@
       font-family: Arial, sans-serif;
       margin: 0;
       padding: 0;
+      background: #f0f0f0;
     }
     .container {
       display: flex;
@@ -18,20 +19,47 @@
     }
     #plot-container {
       flex: 2;
-      padding: 10px;
+      padding: 20px;
+      background: #fff;
     }
     #controls-container {
       flex: 1;
-      padding: 10px;
+      padding: 20px;
       border-left: 1px solid #ccc;
       overflow-y: auto;
+      background: #fafafa;
     }
     .control-group {
-      margin-bottom: 15px;
+      margin-bottom: 20px;
     }
     label {
       display: block;
       margin-bottom: 5px;
+      font-weight: bold;
+    }
+    /* Custom tooltip styling */
+    #custom-tooltip {
+      position: absolute;
+      pointer-events: auto;
+      background: rgba(255, 255, 255, 0.95);
+      border: 1px solid #ccc;
+      padding: 10px;
+      border-radius: 4px;
+      box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+      display: none;
+      z-index: 1000;
+      max-width: 300px;
+      line-height: 1.4;
+    }
+    /* Style for dropdowns and buttons */
+    select, button {
+      padding: 6px 10px;
+      font-size: 14px;
+      margin-top: 5px;
+    }
+    button {
+      cursor: pointer;
+      margin-right: 10px;
     }
   </style>
 </head>
@@ -59,6 +87,9 @@
       </div>
     </div>
   </div>
+  <!-- Custom tooltip div -->
+  <div id="custom-tooltip"></div>
+  
   <script>
     let rawData = [];
     let numericalKeys = [];
@@ -66,6 +97,7 @@
     let xScale = 'linear';
     let yScale = 'linear';
 
+    // Function to check if a value is numeric
     function isNumeric(value) {
       return typeof value === 'number' && !isNaN(value);
     }
@@ -80,7 +112,6 @@
       numericalKeys = [];
       nonNumericalKeys = [];
       allKeys.forEach(key => {
-        // Check if at least one non-null value is numeric.
         let foundNumeric = false;
         for (let item of data) {
           if (item[key] !== null && item[key] !== undefined) {
@@ -121,10 +152,13 @@
         ySelect.value = numericalKeys[1];
       }
 
+      // List of non-numerical keys to exclude from the checkboxes.
+      const excludeKeys = ["comment", "double check?", "Check 20190828", "Red or blue", "check E again 20190908", "20190912, correct E bit"];
       // Populate checkboxes for non-numerical keys.
       const hoverContainer = document.getElementById('hover-checkboxes');
       hoverContainer.innerHTML = '';
       nonNumericalKeys.forEach(key => {
+        if (excludeKeys.includes(key)) return; // skip excluded keys
         let checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.id = 'chk-' + key;
@@ -169,6 +203,10 @@
         let textLines = [];
         selectedHoverKeys.forEach(key => {
           let val = item[key] !== null ? item[key] : '';
+          // If the value is a URL, make it clickable.
+          if (typeof val === 'string' && (val.startsWith("http://") || val.startsWith("https://"))) {
+            val = `<a href="${val}" target="_blank">${val}</a>`;
+          }
           textLines.push(`${key}: ${val}`);
         });
         return textLines.join('<br>');
@@ -179,24 +217,62 @@
         y: yData,
         mode: 'markers',
         type: 'scatter',
-        text: hoverTexts,
-        hoverinfo: 'text'
+        customdata: hoverTexts,
+        hoverinfo: 'skip', // disable built-in hover
+        marker: {
+          size: 12,
+          opacity: 0.8,
+          line: {
+            width: 1,
+            color: '#333'
+          }
+        }
       };
 
       const layout = {
         xaxis: {
           title: xKey,
-          type: xScale
+          type: xScale,
+          automargin: true
         },
         yaxis: {
           title: yKey,
-          type: yScale
+          type: yScale,
+          automargin: true
         },
-        margin: { t: 20 }
+        margin: { t: 20, b: 50, l: 50, r: 20 },
+        hovermode: false,
+        plot_bgcolor: "#f9f9f9"
       };
 
-      Plotly.newPlot('plot-container', [trace], layout);
+      Plotly.newPlot('plot-container', [trace], layout).then(() => {
+        // Attach custom hover events for clickable tooltips.
+        const plotDiv = document.getElementById('plot-container');
+        plotDiv.on('plotly_hover', function(eventData){
+          const point = eventData.points[0];
+          const hoverText = point.customdata;
+          const tooltip = document.getElementById('custom-tooltip');
+          tooltip.innerHTML = hoverText;
+          // Position the tooltip near the mouse pointer.
+          tooltip.style.left = eventData.event.clientX + 10 + 'px';
+          tooltip.style.top = eventData.event.clientY + 10 + 'px';
+          tooltip.style.display = 'block';
+        });
+        plotDiv.on('plotly_unhover', function(eventData){
+          const tooltip = document.getElementById('custom-tooltip');
+          setTimeout(function(){
+             if (!tooltip.matches(':hover')) {
+                tooltip.style.display = 'none';
+             }
+          }, 300);
+        });
+      });
     }
+
+    // Keep tooltip visible when mouse is over it, and hide it on mouse leave.
+    document.getElementById('custom-tooltip').addEventListener('mouseleave', function(){
+      this.style.display = 'none';
+    });
 
     // Attach event listeners for the dropdowns.
     document.getElementById('x-axis-select').addEventListener('change', updatePlot);
@@ -226,6 +302,10 @@
       .catch(error => {
         console.error('Error loading JSON:', error);
       });
+
+    // Note on percentage fields:
+    // If you have a numerical property that is stored as a percentage (with a '%' sign),
+    // it's best to update your JSON processing (in the Python script) to strip the '%' and convert it to a number.
   </script>
 </body>
 </html>
