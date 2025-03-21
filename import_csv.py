@@ -187,4 +187,38 @@ csv_filename = "QFC_cleanup.csv"       # Change this to your CSV file path.
 json_filename = "output.json"    # Output JSON file.
 process_csv_to_json(csv_filename, json_filename)
 
+# %% fix percentage values
+import json
+
+def fix_percentage_value(value):
+    """
+    If the value is a string ending with '%', remove the '%' and convert to a float.
+    Otherwise, return the value unchanged.
+    """
+    if isinstance(value, str) and value.strip().endswith('%'):
+        try:
+            return float(value.strip().rstrip('%'))/100
+        except ValueError:
+            return value
+    return value
+
+def fix_percentages_in_json(input_file, output_file):
+    with open(input_file, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    
+    # Assuming data is a list of dictionaries:
+    for item in data:
+        for key, value in item.items():
+            item[key] = fix_percentage_value(value)
+    
+    with open(output_file, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=2)
+    print(f"Fixed percentages saved to {output_file}")
+
+# if __name__ == '__main__':
+
+fix_percentages_in_json('output.json', 'QFC-POM.json')
+
+
+
 # %%

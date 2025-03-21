@@ -91,6 +91,13 @@
   <div id="custom-tooltip"></div>
   
   <script>
+    // Add these lines at the top of your <script> tag.
+    let lastMouseX = 0, lastMouseY = 0;
+    document.addEventListener('mousemove', function(e) {
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
+    });
+
     let rawData = [];
     let numericalKeys = [];
     let nonNumericalKeys = [];
@@ -218,7 +225,7 @@
         mode: 'markers',
         type: 'scatter',
         customdata: hoverTexts,
-        hoverinfo: 'skip', // disable built-in hover
+        // hoverinfo: 'skip', // disable built-in hover
         marker: {
           size: 12,
           opacity: 0.8,
@@ -241,32 +248,36 @@
           automargin: true
         },
         margin: { t: 20, b: 50, l: 50, r: 20 },
-        hovermode: false,
+        hovermode: 'closest',
         plot_bgcolor: "#f9f9f9"
       };
 
       Plotly.newPlot('plot-container', [trace], layout).then(() => {
-        // Attach custom hover events for clickable tooltips.
-        const plotDiv = document.getElementById('plot-container');
-        plotDiv.on('plotly_hover', function(eventData){
-          const point = eventData.points[0];
-          const hoverText = point.customdata;
-          const tooltip = document.getElementById('custom-tooltip');
-          tooltip.innerHTML = hoverText;
-          // Position the tooltip near the mouse pointer.
-          tooltip.style.left = eventData.event.clientX + 10 + 'px';
-          tooltip.style.top = eventData.event.clientY + 10 + 'px';
-          tooltip.style.display = 'block';
-        });
-        plotDiv.on('plotly_unhover', function(eventData){
-          const tooltip = document.getElementById('custom-tooltip');
-          setTimeout(function(){
-             if (!tooltip.matches(':hover')) {
-                tooltip.style.display = 'none';
-             }
-          }, 300);
-        });
-      });
+    const plotDiv = document.getElementById('plot-container');
+
+    plotDiv.on('plotly_hover', function(eventData) {
+        console.log("plotly_hover event fired:", eventData);  // Debug log
+        const point = eventData.points[0];
+        const hoverText = point.customdata;
+        const tooltip = document.getElementById('custom-tooltip');
+        tooltip.innerHTML = hoverText;
+        // Use eventData.event if available; otherwise fallback to global mouse coordinates.
+        const xPos = (eventData.event && eventData.event.clientX) || lastMouseX;
+        const yPos = (eventData.event && eventData.event.clientY) || lastMouseY;
+        tooltip.style.left = (xPos + 10) + 'px';
+        tooltip.style.top = (yPos + 10) + 'px';
+        tooltip.style.display = 'block';
+    });
+
+    plotDiv.on('plotly_unhover', function() {
+        const tooltip = document.getElementById('custom-tooltip');
+        setTimeout(function(){
+        tooltip.style.display = 'none';
+        }, 2000);
+    });
+    });
+
+
     }
 
     // Keep tooltip visible when mouse is over it, and hide it on mouse leave.
@@ -291,7 +302,7 @@
     });
 
     // Load JSON data from output.json.
-    fetch('output.json')
+    fetch('QFC-POM.json')
       .then(response => response.json())
       .then(data => {
         rawData = data;
