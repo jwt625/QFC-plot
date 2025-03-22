@@ -46,7 +46,8 @@
 - Brubaker2022: https://doi.org/10.1103/PhysRevX.12.021062
 - Delaney2022: https://doi.org/10.1038/s41586-022-04720-2
 - Zhao2023: https://doi.org/10.1364/OPTICA.479162
-
+- Zhao2025: https://doi.org/10.1038/s41565-025-01874-8
+  - https://rdcu.be/eeAze
 
 ## Electro-optics
 - Fan2018: https://doi.org/10.1126/sciadv.aar4994
