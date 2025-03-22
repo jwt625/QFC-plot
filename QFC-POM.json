@@ -1114,7 +1114,7 @@
     "gamma_tot/2pi": 150000.0,
     "C0": 0.0015,
     "gamma_mu/2pi": 1000000.0,
-    "eta_m": 6.69,
+    "eta_m": 0.87,
     "Directly measured C0": null,
     "eta0 = 4*C0*eta_o*eta_m": 0.02,
     "eta_total": null,

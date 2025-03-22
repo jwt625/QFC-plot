@@ -261,10 +261,9 @@
         hovermode: 'closest',
         plot_bgcolor: "#f9f9f9"
       };
-
       Plotly.newPlot('plot-container', [trace], layout).then(() => {
     const plotDiv = document.getElementById('plot-container');
-
+    let tooltipTimer = null;
     plotDiv.on('plotly_hover', function(eventData) {
         console.log("plotly_hover event fired:", eventData);  // Debug log
         const point = eventData.points[0];
@@ -277,15 +276,23 @@
         tooltip.style.left = (xPos + 10) + 'px';
         tooltip.style.top = (yPos + 10) + 'px';
         tooltip.style.display = 'block';
-    });
-
-    plotDiv.on('plotly_unhover', function() {
-        const tooltip = document.getElementById('custom-tooltip');
-        setTimeout(function(){
+        
+        // Clear any existing timer and force the tooltip to remain visible for 2000 ms.
+        if (tooltipTimer) {
+        clearTimeout(tooltipTimer);
+        }
+        tooltipTimer = setTimeout(function(){
         tooltip.style.display = 'none';
+        tooltipTimer = null;
         }, 2000);
     });
+    
+    // Remove any automatic hiding on unhover; tooltip will hide only after 2000 ms.
+    plotDiv.on('plotly_unhover', function() {
+        // Do nothing.
     });
+    });
+
 
 
     }
