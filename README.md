@@ -42,6 +42,10 @@
 
 ## Electro-optomechanics
 
+- Andrews2014: https://doi.org/10.1038/nphys2911
+  - https://rdcu.be/eeADG
+- Higginbotham2018: https://doi.org/10.1038/s41567-018-0210-0
+  - https://rdcu.be/eeAD3
 - Arnold2020: https://doi.org/10.1038/s41467-020-18269-z
 - Brubaker2022: https://doi.org/10.1103/PhysRevX.12.021062
 - Delaney2022: https://doi.org/10.1038/s41586-022-04720-2
