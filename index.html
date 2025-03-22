@@ -211,15 +211,21 @@
       const hoverTexts = filteredData.map(item => {
         let textLines = [];
         selectedHoverKeys.forEach(key => {
-          let val = item[key] !== null ? item[key] : '';
-          // If the value is a URL, make it clickable.
-          if (typeof val === 'string' && (val.startsWith("http://") || val.startsWith("https://"))) {
+            let val = item[key] !== null ? item[key] : '';
+            // If the value is a URL, make it clickable.
+            if (typeof val === 'string' && (val.startsWith("http://") || val.startsWith("https://"))) {
             val = `<a href="${val}" target="_blank">${val}</a>`;
-          }
-          textLines.push(`${key}: ${val}`);
+            }
+            textLines.push(`${key}: ${val}`);
         });
-        return textLines.join('<br>');
-      });
+        // Prepend thumbnail image from images folder.
+        let thumbnail = "";
+        if (item["Latex Key"]) {
+            thumbnail = `<img src="images/${item["Latex Key"]}.png" style="max-width: 100%; margin-bottom: 10px;" />`;
+        }
+        return thumbnail + textLines.join('<br>');
+        });
+
 
       const trace = {
         x: xData,
