@@ -319,9 +319,12 @@
     });
 
     // Load JSON data from output.json.
-    fetch('QFC-POM.json')
+    fetch('QFC-POM.json?' + new Date().getTime())
       .then(response => response.json())
       .then(data => {
+        console.log('Loaded data:', data);  // Debug log
+        console.log('Number of entries:', data.length);  // Debug log
+        console.log('Entries from 2013:', data.filter(item => item.time === 2013.0));  // Debug log
         rawData = data;
         identifyKeys(rawData);
         populateControls();
