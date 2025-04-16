@@ -80,6 +80,17 @@
         <select id="y-axis-select"></select>
       </div>
       <div class="control-group">
+        <label for="size-axis-select">Size points by (optional):</label>
+        <select id="size-axis-select">
+          <option value="">None</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label for="point-opacity">Point Opacity:</label>
+        <input type="range" id="point-opacity" min="0.1" max="1" step="0.1" value="0.7">
+        <span id="opacity-value">0.7</span>
+      </div>
+      <div class="control-group">
         <label>Hover Info (non-numerical):</label>
         <div id="hover-checkboxes"></div>
       </div>
@@ -142,8 +153,11 @@
     function populateControls() {
       const xSelect = document.getElementById('x-axis-select');
       const ySelect = document.getElementById('y-axis-select');
+      const sizeSelect = document.getElementById('size-axis-select');
       xSelect.innerHTML = '';
       ySelect.innerHTML = '';
+      sizeSelect.innerHTML = '<option value="">None</option>';
+      
       numericalKeys.forEach(key => {
         let optionX = document.createElement('option');
         optionX.value = key;
@@ -154,12 +168,34 @@
         optionY.value = key;
         optionY.text = key;
         ySelect.appendChild(optionY);
+
+        let optionSize = document.createElement('option');
+        optionSize.value = key;
+        optionSize.text = key;
+        sizeSelect.appendChild(optionSize);
       });
-      // Set default selections.
+      
+      // Set default selections
       if (numericalKeys.length >= 2) {
         xSelect.value = numericalKeys[0];
         ySelect.value = numericalKeys[1];
       }
+
+      // Set default size parameter to "E qubit"
+      if (numericalKeys.includes("E qubit")) {
+        sizeSelect.value = "E qubit";
+      }
+
+      // Add event listener for opacity slider
+      const opacitySlider = document.getElementById('point-opacity');
+      const opacityValue = document.getElementById('opacity-value');
+      opacitySlider.addEventListener('input', function() {
+        opacityValue.textContent = this.value;
+        updatePlot();
+      });
+
+      // Add event listener for size axis select
+      sizeSelect.addEventListener('change', updatePlot);
 
       // List of non-numerical keys to exclude from the checkboxes.
       const excludeKeys = ["comment", "double check?", "Check 20190828", "Red or blue", "check E again 20190908", "20190912, correct E bit"];
@@ -167,12 +203,12 @@
       const hoverContainer = document.getElementById('hover-checkboxes');
       hoverContainer.innerHTML = '';
       nonNumericalKeys.forEach(key => {
-        if (excludeKeys.includes(key)) return; // skip excluded keys
+        if (excludeKeys.includes(key)) return;
         let checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.id = 'chk-' + key;
         checkbox.value = key;
-        checkbox.checked = true; // default: include in hover info
+        checkbox.checked = true;
         checkbox.addEventListener('change', updatePlot);
         
         let label = document.createElement('label');
@@ -190,8 +226,14 @@
     function updatePlot() {
       const xSelect = document.getElementById('x-axis-select');
       const ySelect = document.getElementById('y-axis-select');
+      const sizeSelect = document.getElementById('size-axis-select');
+      const opacitySlider = document.getElementById('point-opacity');
       const xKey = xSelect.value;
       const yKey = ySelect.value;
+      const sizeKey = sizeSelect.value;
+      const opacity = parseFloat(opacitySlider.value);
+
+      console.log('Plotting with x:', xKey, 'y:', yKey);  // Debug log
 
       // Get selected non-numerical keys for hover info.
       const hoverContainer = document.getElementById('hover-checkboxes');
@@ -203,29 +245,61 @@
       });
 
       // Filter out data points with missing x or y values.
-      const filteredData = rawData.filter(item => item[xKey] !== null && item[yKey] !== null);
+      const filteredData = rawData.filter(item => {
+        const hasX = item[xKey] !== null && item[xKey] !== undefined;
+        const hasY = item[yKey] !== null && item[yKey] !== undefined;
+        if (!hasX || !hasY) {
+          console.log('Filtered out item:', item["Latex Key"], 'x:', item[xKey], 'y:', item[yKey]);
+        }
+        return hasX && hasY;
+      });
+
+      // Additional debugging for Forsch2020
+      const forschEntry = rawData.find(item => item["Latex Key"] === "Forsch2020");
+      if (forschEntry) {
+        console.log('Forsch2020 values:', {
+          time: forschEntry.time,
+          g0_2pi: forschEntry["g0/2pi"],
+          E_qubit: forschEntry["E qubit"]
+        });
+        console.log('Is g0/2pi numeric?', isNumeric(forschEntry["g0/2pi"]));
+        console.log('Is time numeric?', isNumeric(forschEntry.time));
+      }
+
+      console.log('Number of points after filtering:', filteredData.length);  // Debug log
+      console.log('Forsch2020 after filtering:', filteredData.find(item => item["Latex Key"] === "Forsch2020"));  // Debug specific entry
+
       const xData = filteredData.map(item => item[xKey]);
       const yData = filteredData.map(item => item[yKey]);
+      
+      // Calculate point sizes if a size parameter is selected
+      let pointSizes = [];
+      if (sizeKey) {
+        const sizeData = filteredData.map(item => item[sizeKey]);
+        const minSize = Math.min(...sizeData.filter(val => val !== null && val !== undefined));
+        const maxSize = Math.max(...sizeData.filter(val => val !== null && val !== undefined));
+        pointSizes = sizeData.map(val => {
+          if (val === null || val === undefined) return 10;
+          return 10 + ((val - minSize) / (maxSize - minSize)) * 20; // Scale between 10 and 30
+        });
+      }
 
       // Build hover text for each data point.
       const hoverTexts = filteredData.map(item => {
         let textLines = [];
         selectedHoverKeys.forEach(key => {
             let val = item[key] !== null ? item[key] : '';
-            // If the value is a URL, make it clickable.
             if (typeof val === 'string' && (val.startsWith("http://") || val.startsWith("https://"))) {
             val = `<a href="${val}" target="_blank">${val}</a>`;
             }
             textLines.push(`${key}: ${val}`);
         });
-        // Prepend thumbnail image from images folder.
         let thumbnail = "";
         if (item["Latex Key"]) {
             thumbnail = `<img src="images/${item["Latex Key"]}.png" style="max-width: 100%; margin-bottom: 10px;" />`;
         }
         return thumbnail + textLines.join('<br>');
-        });
-
+      });
 
       const trace = {
         x: xData,
@@ -233,10 +307,9 @@
         mode: 'markers',
         type: 'scatter',
         customdata: hoverTexts,
-        // hoverinfo: 'skip', // disable built-in hover
         marker: {
-          size: 12,
-          opacity: 0.8,
+          size: sizeKey ? pointSizes : 12,
+          opacity: opacity,
           line: {
             width: 1,
             color: '#333'
@@ -245,8 +318,8 @@
       };
 
       const layout = {
-  width: 800,   // set the desired width
-  height: 600,  // set the desired height
+        width: 800,
+        height: 600,
         xaxis: {
           title: xKey,
           type: xScale,
@@ -324,7 +397,7 @@
       .then(data => {
         console.log('Loaded data:', data);  // Debug log
         console.log('Number of entries:', data.length);  // Debug log
-        console.log('Entries from 2013:', data.filter(item => item.time === 2013.0));  // Debug log
+        console.log('Forsch2020 entry:', data.find(item => item["Latex Key"] === "Forsch2020"));  // Debug specific entry
         rawData = data;
         identifyKeys(rawData);
         populateControls();
